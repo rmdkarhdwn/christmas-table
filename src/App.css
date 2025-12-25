@@ -49,18 +49,30 @@ h1 {
 }
 
 /* 중앙 장식 */
+/* 중앙 장식 - 노란색에서 초록색 그라데이션 */
 .centerpiece {
     position: absolute; 
     top: 50%; 
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #f0f0f0; 
+    
+    /* 폰트 스타일 */
     font-weight: 900; 
-    font-size: 1.8rem;
+    font-size: 2rem; /* 크기를 살짝 키우면 더 예뻐요 */
     text-align: center; 
     pointer-events: none; 
-    line-height: 1.2;
+    line-height: 1.1;
     z-index: 0;
+    font-family: 'Arial Black', sans-serif; /* 두꺼운 폰트가 그라데이션이 잘 보임 */
+
+    /* 🔥 핵심: 그라데이션 설정 */
+    background: linear-gradient(to bottom, #ffcc00 0%, #27ae60 100%); /* 위 노랑, 아래 초록 */
+    -webkit-background-clip: text; /* 배경을 글자 모양으로 자름 (크롬/사파리) */
+    background-clip: text; /* 배경을 글자 모양으로 자름 */
+    color: transparent; /* 글자색을 투명하게 해서 배경이 보이게 함 */
+    
+    /* 약간의 그림자 (가독성용) */
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
 }
 
 /* 접시 디자인 */

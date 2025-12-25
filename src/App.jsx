@@ -44,6 +44,10 @@ function App() {
   // 등록 로직 (금지어 포함)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const myPosts = JSON.parse(localStorage.getItem("myFoodPosts") || "[]");
+    if (myPosts.length >= 1) {
+      return alert("이미 식탁에 음식을 올리셨어요! 다른 사람의 음식을 구경해보는건 어떤가요? 😊");
+    }
 
     // 1. 금지어 필터링
     const badWords = ["시발", "씨발", "병신", "존나", "개새끼", "이기야", "노무", "운지", "섹스", "자지", "보지", "엠창"];
@@ -83,9 +87,18 @@ function App() {
   // 삭제 로직
   const handleDelete = async (id) => {
     if (window.confirm("정말 이 음식을 식탁에서 치울까요?")) {
-      await deleteDoc(doc(db, "message", id));
-      setSelected(null);
-      fetchData();
+      try {
+        await deleteDoc(doc(db, "message", id));
+        
+        // 🔥 핵심: 삭제 성공 후 내 로컬 기록도 지워서 다시 작성 가능하게 함
+        localStorage.removeItem("myFoodPosts"); 
+        
+        setSelected(null);
+        fetchData();
+        alert("음식을 치웠습니다. 이제 새 음식을 올릴 수 있어요!");
+      } catch (err) {
+        alert("삭제에 실패했습니다.");
+      }
     }
   };
 
