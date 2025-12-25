@@ -5,62 +5,40 @@ import './App.css'
 
 function App() {
   const [messages, setMessages] = useState([]);
-  const [selected, setSelected] = useState(null); // 상세보기 모달
-  const [showForm, setShowForm] = useState(false); // 음식 추가 모달
-
-  // 입력 폼 상태
+  const [selected, setSelected] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [selectedFood, setSelectedFood] = useState("🍗");
 
-  const foodIcons = [
-    "🍗", "🍕", "🍔", "🍣", "🍰", "🍷",
-    "🍝", "🥨", "🍮", "🥗", "🥪", "🍩",
-    // 🎄 Christmas vibes
-    "🍪", // 크리스마스 쿠키
-    "🦃", // 터키
-    "🥧", // 파이
-    "🎂", // 케이크
-    "🧁", // 컵케이크
-    "🍫", // 초콜릿
-    "🍬", // 사탕
-    "☕️", // 핫초코 / 따뜻한 음료 느낌
-];
+  const foodIcons = ["🍗", "🍕", "🍔", "🍣", "🍰", "🍷", "🍝", "🥨", "🍮", "🥗", "🥪", "🍩", "🍪", "🦃", "🥧", "🎂", "🧁", "🍫", "🍬", "☕️"];
 
-  // 데이터 불러오기 (최신순)
   const fetchData = async () => {
     try {
       const q = query(collection(db, "message"), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMessages(data);
-    } catch (err) {
-      console.error("데이터 로드 에러:", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  // 등록 로직 (금지어 포함)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 중복 체크
     const myPosts = JSON.parse(localStorage.getItem("myFoodPosts") || "[]");
-    if (myPosts.length >= 1) {
-      return alert("이미 식탁에 음식을 올리셨어요! 다른 사람의 음식을 구경해보는건 어떤가요? 😊");
+    if (myPosts.length >= 1) return alert("이미 음식을 올리셨어요! 😊");
+
+    const badWords = ["시발", "씨발", "병신", "존나", "개새끼"]; // 필요시 추가
+    if (badWords.some(word => newName.includes(word) || newMessage.includes(word))) {
+      return alert("예쁜 말을 사용해 주세요! 😊");
     }
 
-    // 1. 금지어 필터링
-    const badWords = ["시발", "씨발", "병신", "존나", "개새끼", "이기야", "노무", "운지", "섹스", "자지", "보지", "엠창"];
-    const cleanName = newName.replace(/\s+/g, "");
-    const cleanMessage = newMessage.replace(/\s+/g, "");
-    const isBad = badWords.some(word => cleanName.includes(word) || cleanMessage.includes(word));
+    if (!newName.trim() || !newMessage.trim()) return alert("모두 입력해주세요!");
 
-    if (isBad) return alert("식탁에 어울리지 않는 예쁜 말을 사용해 주세요! 😊");
-    if (!newName.trim() || !newMessage.trim()) return alert("이름과 메시지를 입력해주세요!");
-
-    // 2. 작성자 고유 ID 생성 (삭제 권한용)
     const authorCode = Math.random().toString(36).substring(2, 11);
-
     try {
       await addDoc(collection(db, "message"), {
         name: newName,
@@ -69,40 +47,21 @@ function App() {
         authorId: authorCode,
         createdAt: new Date()
       });
-
-      // 내 브라우저 저장소에 작성 권한 코드 저장
-      const myPosts = JSON.parse(localStorage.getItem("myFoodPosts") || "[]");
-      myPosts.push(authorCode);
-      localStorage.setItem("myFoodPosts", JSON.stringify(myPosts));
-
-      // 성공 후 초기화
-      setNewName(""); setNewMessage(""); setSelectedFood("🍗");
-      setShowForm(false);
+      localStorage.setItem("myFoodPosts", JSON.stringify([authorCode]));
+      setNewName(""); setNewMessage(""); setShowForm(false);
       fetchData();
-    } catch (err) {
-      alert("전송에 실패했습니다. 다시 시도해주세요.");
-    }
+    } catch (err) { alert("전송 실패"); }
   };
 
-  // 삭제 로직
   const handleDelete = async (id) => {
-    if (window.confirm("정말 이 음식을 식탁에서 치울까요?")) {
-      try {
-        await deleteDoc(doc(db, "message", id));
-        
-        // 🔥 핵심: 삭제 성공 후 내 로컬 기록도 지워서 다시 작성 가능하게 함
-        localStorage.removeItem("myFoodPosts"); 
-        
-        setSelected(null);
-        fetchData();
-        alert("음식을 치웠습니다. 이제 새 음식을 올릴 수 있어요!");
-      } catch (err) {
-        alert("삭제에 실패했습니다.");
-      }
+    if (window.confirm("정말 이 음식을 치울까요?")) {
+      await deleteDoc(doc(db, "message", id));
+      localStorage.removeItem("myFoodPosts"); // 다시 작성 가능하게 삭제
+      setSelected(null);
+      fetchData();
     }
   };
 
-  // 본인 확인 (로컬 스토리지 대조)
   const isMyPost = (postAuthorId) => {
     const myPosts = JSON.parse(localStorage.getItem("myFoodPosts") || "[]");
     const isAdmin = new URLSearchParams(window.location.search).get("admin") === "true";
@@ -112,20 +71,15 @@ function App() {
   return (
     <div className="room-container">
       <h1>🎄 우리들의 크리스마스 식탁 🎄</h1>
-      
       <div className="white-table">
-        {/* 중앙 장식 문구 */}
         <div className="centerpiece">Merry<br/>Christmas</div>
-        
         {messages.map((item) => (
           <div key={item.id} className="plate" onClick={() => setSelected(item)}>
-            <span className="food-icon">{item.food || "🎁"}</span>
+            <span className="food-icon">{item.food}</span>
             <span className="owner-name">{item.name}</span>
           </div>
         ))}
       </div>
-
-      {/* 우측 하단 플러스 버튼 */}
       <button className="floating-add-btn" onClick={() => setShowForm(true)}>+</button>
 
       {/* [모달 1] 음식 추가 폼 */}
